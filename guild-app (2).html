@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>⚔️ 軍団管理システム</title>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCxBCWr-J71IJAK267kEiTJZDKzPoFm6bs",
+    authDomain: "guild-app-d4ba9.firebaseapp.com",
+    databaseURL: "https://guild-app-d4ba9-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "guild-app-d4ba9",
+    storageBucket: "guild-app-d4ba9.firebasestorage.app",
+    messagingSenderId: "910830159098",
+    appId: "1:910830159098:web:49d47e343b1c2ead18b543"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window._fbReady = false;
+  window._db = db;
+  window._ref = ref;
+  window._set = set;
+  window._onValue = onValue;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    window._fbReady = true;
+    if (window._startSync) window._startSync();
+  });
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Orbitron:wght@700;900&display=swap');
+  :root{--bg:#0a0c14;--surface:#111827;--surface2:#1a2235;--border:#1e3a5f;--accent:#00c6ff;--accent2:#f59e0b;--danger:#ef4444;--success:#10b981;--text:#e2e8f0;--muted:#64748b;--gold:#fbbf24;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+  .header{background:linear-gradient(135deg,#0d1b2e,#0a1628);border-bottom:1px solid var(--border);padding:12px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 20px rgba(0,198,255,.08);}
+  .header-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:900;color:var(--accent);letter-spacing:2px;text-shadow:0 0 20px rgba(0,198,255,.5);}
+  .header-right{display:flex;align-items:center;gap:8px;}
+  .header-badge{background:linear-gradient(135deg,var(--accent2),#f97316);color:#000;font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px;}
+  .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s;}
+  .sync-dot.online{background:var(--success);box-shadow:0 0 6px var(--success);}
+  .sync-dot.syncing{background:var(--gold);animation:pulse .8s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex:1;min-width:70px;padding:10px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(0,198,255,.05);}
+  .tab-icon{font-size:16px;display:block;margin-bottom:2px;}
+  .page{display:none;padding:16px;}.page.active{display:block;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;}
+  .card-title{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+  .form-group{margin-bottom:12px;}
+  .form-label{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.5px;margin-bottom:5px;display:block;}
+  .form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Noto Sans JP',sans-serif;outline:none;transition:border-color .2s;}
+  .form-input:focus{border-color:var(--accent);}
+  .form-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Noto Sans JP',sans-serif;outline:none;appearance:none;cursor:pointer;}
+  .btn{display:block;width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:'Noto Sans JP',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:.5px;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#0090ff);color:#000;box-shadow:0 4px 15px rgba(0,198,255,.3);}
+  .btn-primary:active{transform:scale(.97);}
+  .btn-danger{background:linear-gradient(135deg,var(--danger),#dc2626);color:#fff;}
+  .btn-success{background:linear-gradient(135deg,var(--success),#059669);color:#fff;box-shadow:0 4px 15px rgba(16,185,129,.3);}
+  .btn-gold{background:linear-gradient(135deg,var(--gold),#f59e0b);color:#000;box-shadow:0 4px 15px rgba(251,191,36,.3);}
+  .btn-sm{width:auto;padding:5px 12px;font-size:11px;}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);}
+  .member-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+  .member-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#0d2847);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .member-info{flex:1;min-width:0;}
+  .member-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .member-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+  .member-actions{display:flex;gap:4px;flex-shrink:0;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+  .tag-power{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+  .tag-vessel{background:rgba(251,191,36,.2);color:var(--gold);border:1px solid rgba(251,191,36,.3);}
+  .time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px;}
+  .time-slot{padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);text-align:center;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s;}
+  .time-slot.selected{background:rgba(0,198,255,.15);border-color:var(--accent);color:var(--accent);}
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+  .stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+  .stat-value{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;color:var(--accent);line-height:1;}
+  .stat-label{font-size:10px;color:var(--muted);margin-top:4px;}
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .bar-label{font-size:10px;width:70px;flex-shrink:0;color:var(--muted);}
+  .bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;}
+  .bar-count{font-size:10px;font-weight:700;color:#000;}
+  .roll-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+  .roll-member{font-weight:700;font-size:14px;margin-bottom:8px;}
+  .answer-btn{padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Noto Sans JP',sans-serif;text-align:center;}
+  .answer-btn.sel0{background:rgba(16,185,129,.2);border-color:var(--success);color:var(--success);}
+  .answer-btn.sel1{background:rgba(251,191,36,.2);border-color:var(--gold);color:var(--gold);}
+  .answer-btn.sel2{background:rgba(139,92,246,.2);border-color:#8b5cf6;color:#a78bfa;}
+  .answer-btn.sel3{background:rgba(239,68,68,.2);border-color:var(--danger);color:var(--danger);}
+  .answer-btn.sel4{background:rgba(0,198,255,.2);border-color:var(--accent);color:var(--accent);}
+  .answer-btn.sel5{background:rgba(249,115,22,.2);border-color:#f97316;color:#fb923c;}
+  .answer-btn.sel6{background:rgba(236,72,153,.2);border-color:#ec4899;color:#f472b6;}
+  .answer-btn.sel7{background:rgba(99,102,241,.2);border-color:#6366f1;color:#818cf8;}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:flex-end;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--surface);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:90vh;overflow-y:auto;}
+  .modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+  .modal-title{font-weight:900;font-size:16px;margin-bottom:16px;color:var(--accent);}
+  .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--success);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;transition:all .3s;z-index:300;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);}
+  .empty-icon{font-size:40px;margin-bottom:8px;}
+  .empty-text{font-size:13px;}
+  .search-bar{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px 10px 36px;color:var(--text);font-size:14px;font-family:'Noto Sans JP',sans-serif;outline:none;margin-bottom:12px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center;}
+  .today-banner{background:linear-gradient(135deg,#0d2847,#091d38);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+  .today-date{font-size:12px;color:var(--accent);font-weight:700;}
+  .today-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+  .question-editor{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+  .q-title{font-weight:700;font-size:13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .q-title span{flex:1;word-break:break-all;}
+  .option-tag{background:rgba(0,198,255,.1);border:1px solid rgba(0,198,255,.3);color:var(--accent);padding:4px 10px;border-radius:20px;font-size:11px;margin:3px;display:inline-block;}
+  .sync-banner{background:rgba(0,198,255,.08);border:1px solid rgba(0,198,255,.2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title">⚔ GUILD CMD</div>
+  <div class="header-right">
+    <div class="sync-dot syncing" id="syncDot"></div>
+    <div class="header-badge" id="memberCountBadge">0人</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('home',this)"><span class="tab-icon">🏠</span>ホーム</button>
+  <button class="tab" onclick="switchTab('members',this)"><span class="tab-icon">👥</span>メンバー</button>
+  <button class="tab" onclick="switchTab('rollcall',this)"><span class="tab-icon">📋</span>点呼</button>
+  <button class="tab" onclick="switchTab('stats',this)"><span class="tab-icon">📊</span>統計</button>
+  <button class="tab" onclick="switchTab('settings',this)"><span class="tab-icon">⚙️</span>設定</button>
+</div>
+
+<div id="page-home" class="page active">
+  <div class="sync-banner">🔴 LIVE <span id="syncStatus">Firebase に接続中...</span></div>
+  <div class="today-banner">
+    <div>
+      <div class="today-date" id="todayDate">読込中...</div>
+      <div class="today-sub">本日の集団戦情報</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:var(--muted)">参加表明</div>
+      <div style="font-family:'Orbitron';font-size:18px;font-weight:900;color:var(--success)" id="homeAvailCount">-</div>
+    </div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-value" id="homeTotal">0</div><div class="stat-label">👥 総メンバー</div></div>
+    <div class="stat-box"><div class="stat-value" id="homeAvail" style="color:var(--success)">0</div><div class="stat-label">✅ 参加可能</div></div>
+    <div class="stat-box"><div class="stat-value" id="homePower" style="color:var(--danger);font-size:15px">0</div><div class="stat-label">⚔️ 総戦力</div></div>
+    <div class="stat-box"><div class="stat-value" id="homeVessel" style="color:var(--gold)">-</div><div class="stat-label">🏺 平均器Lv</div></div>
+  </div>
+  <div class="card"><div class="card-title">⏰ 参加可能時間帯 分布</div><div id="homeTimeChart">データなし</div></div>
+  <div class="card"><div class="card-title">🔴 本日の点呼 未回答</div><div id="homeUnanswered" style="font-size:12px;color:var(--muted)">点呼が開始されていません</div></div>
+  <button class="btn btn-gold" onclick="switchTab('rollcall',null)">📣 本日の点呼を開始</button>
+</div>
+
+<div id="page-members" class="page">
+  <input class="search-bar" type="text" placeholder="メンバーを検索..." oninput="renderMembers(this.value)">
+  <button class="btn btn-primary" style="margin-bottom:12px" onclick="openAddMember()">＋ メンバーを追加</button>
+  <div id="memberList"></div>
+</div>
+
+<div id="page-rollcall" class="page">
+  <div class="card">
+    <div class="card-title">📋 本日の作戦点呼</div>
+    <div class="today-date" style="margin-bottom:8px" id="rollDate"></div>
+    <div id="rollQuestions"></div>
+    <div id="rollList"></div>
+    <button class="btn btn-success" style="margin-top:8px" onclick="saveRollCall()">💾 点呼を保存・全員に共有</button>
+  </div>
+</div>
+
+<div id="page-stats" class="page">
+  <div class="card"><div class="card-title">📊 時間帯別 参加可能人数</div><div id="statsTimeChart"></div></div>
+  <div class="card"><div class="card-title">⚔️ 戦力分布</div><div id="statsPowerChart"></div></div>
+  <div class="card"><div class="card-title">🏺 器レベル分布</div><div id="statsVesselChart"></div></div>
+  <div class="card"><div class="card-title">📋 本日の点呼結果</div><div id="statsRollResult"></div></div>
+</div>
+
+<div id="page-settings" class="page">
+  <div class="card">
+    <div class="card-title">⏰ 参加可能時間帯</div>
+    <div id="timeSlotList"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input class="form-input" id="newTimeSlot" placeholder="例：19:00〜21:00" style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="addTimeSlot()">追加</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 点呼アンケート項目</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">点呼時に表示される質問</div>
+    <div id="questionList"></div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="openAddQuestion()">＋ 質問を追加</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🔗 共有URL</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px">このURLを全員にLINEで送ってください</div>
+    <div id="shareUrl" style="font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;word-break:break-all;color:var(--accent)">GitHub Pages公開後にURLが表示されます</div>
+    <button class="btn btn-outline" style="margin-top:8px;font-size:12px" onclick="copyUrl()">📋 URLをコピー</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🗑️ データ管理</div>
+    <button class="btn btn-danger" onclick="clearAllData()">全データを初期化（2回タップ）</button>
+  </div>
+</div>
+
+<!-- MODAL: Member -->
+<div class="modal-overlay" id="modalMember">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👤 メンバー登録</div>
+    <input type="hidden" id="editMemberId">
+    <div class="form-group"><label class="form-label">名前 *</label><input class="form-input" id="memberName" placeholder="例：山田太郎" maxlength="20"></div>
+    <div class="form-group">
+      <label class="form-label">絵文字アイコン</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="emojiPicker">
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">⚔️</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">🛡️</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">🏹</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">🔮</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">🗡️</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">💀</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">🔥</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">⚡</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">🌙</span>
+        <span style="font-size:22px;cursor:pointer" onclick="selectEmoji(this)">👑</span>
+      </div>
+      <input type="hidden" id="memberEmoji" value="⚔️">
+    </div>
+    <div class="form-group"><label class="form-label">戦力値</label><input class="form-input" id="memberPower" type="number" placeholder="例：150000" min="0"></div>
+    <div class="form-group"><label class="form-label">器レベル</label><input class="form-input" id="memberVessel" type="number" placeholder="例：85" min="1" max="200"></div>
+    <div class="form-group"><label class="form-label">参加可能時間帯（複数選択可）</label><div class="time-grid" id="memberTimeGrid"></div></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-outline" onclick="closeModal('modalMember')" style="flex:1">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveMember()" style="flex:2">登録 / 更新</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Question -->
+<div class="modal-overlay" id="modalQuestion">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">❓ 質問を追加</div>
+    <input type="hidden" id="editQuestionId">
+    <div class="form-group"><label class="form-label">質問文 *</label><input class="form-input" id="questionText" placeholder="例：本日の集団戦に参加できますか？"></div>
+    <div class="form-group">
+      <label class="form-label">回答タイプ</label>
+      <select class="form-select" id="questionType" onchange="updateOptionPreview()">
+        <option value="custom">🎨 カスタム選択肢</option>
+        <option value="text">自由テキスト</option>
+      </select>
+    </div>
+    <div id="customChoicesArea" class="form-group">
+      <label class="form-label">選択肢（最大8つ）</label>
+      <div id="customChoiceList" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input class="form-input" id="newChoiceEmoji" placeholder="🔥" style="width:52px;text-align:center;font-size:18px;flex-shrink:0">
+        <input class="form-input" id="newChoiceLabel" placeholder="選択肢テキスト" style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="addCustomChoice()" style="flex-shrink:0">追加</button>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:5px">※絵文字は省略可。2〜8個まで</div>
+    </div>
+    <div id="presetPreviewArea" class="form-group" style="display:none">
+      <label class="form-label">プレビュー</label>
+      <div id="optionPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="closeModal('modalQuestion')" style="flex:1">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveQuestion()" style="flex:2">追加 / 更新</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ===== LOCAL STATE =====
+let state = {
+  members: [],
+  timeSlots: ['18:00〜20:00','19:00〜21:00','20:00〜22:00','21:00〜23:00','終日可','時間外'],
+  questions: [
+    {id:'q1',text:'本日の集団戦に参加できますか？',type:'custom',choices:[{emoji:'✅',label:'参加'},{emoji:'❌',label:'不参加'}]},
+    {id:'q2',text:'参加時間帯を選んでください',type:'custom',choices:[{emoji:'✅',label:'参加'},{emoji:'⏰',label:'遅刻'},{emoji:'🤔',label:'未定'},{emoji:'❌',label:'不参加'}]}
+  ],
+  rollcall: {}
+};
+let tempChoices = [];
+
+// ===== FIREBASE =====
+function fbSet(path, data) {
+  if (!window._db) return;
+  window._set(window._ref(window._db, path), data);
+}
+function fbListen(path, cb) {
+  if (!window._db) return;
+  window._onValue(window._ref(window._db, path), snap => cb(snap.val()));
+}
+
+window._startSync = function() {
+  document.getElementById('syncDot').className = 'sync-dot syncing';
+
+  fbListen('members', val => {
+    state.members = val ? Object.values(val) : [];
+    renderAll();
+  });
+  fbListen('settings', val => {
+    if (val) {
+      if (val.timeSlots) state.timeSlots = val.timeSlots;
+      if (val.questions) state.questions = val.questions;
+    }
+    renderAll();
+  });
+  fbListen('rollcall', val => {
+    state.rollcall = val || {};
+    renderAll();
+  });
+
+  document.getElementById('syncDot').className = 'sync-dot online';
+  document.getElementById('syncStatus').textContent = 'リアルタイム同期中 — 全員に即共有';
+};
+
+// Firebaseがまだ読み込まれていない場合は待機
+if (window._fbReady) {
+  window._startSync();
+} else {
+  // module scriptのDOMContentLoadedより後にこのscriptが実行される場合の保険
+  setTimeout(() => { if (window._startSync) window._startSync(); }, 500);
+}
+
+// ===== UTILS =====
+function todayKey() {
+  const n = new Date();
+  return `${n.getFullYear()}-${n.getMonth()+1}-${n.getDate()}`;
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  const map = {home:0,members:1,rollcall:2,stats:3,settings:4};
+  const tabs = document.querySelectorAll('.tab');
+  if (el) el.classList.add('active');
+  else if (map[tab] !== undefined) tabs[map[tab]].classList.add('active');
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'error' ? 'var(--danger)' : 'var(--success)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function copyUrl() {
+  const url = location.href;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => showToast('URLをコピーしました！'));
+  } else {
+    showToast('URL: ' + url);
+  }
+}
+
+function renderAll() {
+  const n = new Date();
+  const d = `${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日（${'日月火水木金土'[n.getDay()]}）`;
+  document.getElementById('todayDate').textContent = d;
+  document.getElementById('rollDate').textContent = d;
+  document.getElementById('memberCountBadge').textContent = state.members.length + '人';
+
+  updateHomeStats();
+  renderMembers();
+  renderRollCall();
+  renderStats();
+  renderSettings();
+
+  const urlEl = document.getElementById('shareUrl');
+  if (location.protocol !== 'file:') urlEl.textContent = location.href;
+  else urlEl.textContent = 'GitHub Pagesに公開するとURLが表示されます';
+}
+
+// ===== HOME =====
+function updateHomeStats() {
+  const today = todayKey();
+  const roll = state.rollcall[today] || {};
+  document.getElementById('homeTotal').textContent = state.members.length;
+
+  const q1 = state.questions[0];
+  let avail = 0;
+  if (q1 && q1.choices && q1.choices.length > 0) {
+    const firstLabel = q1.choices[0].label;
+    state.members.forEach(m => { if (roll[m.id]?.[q1.id] === firstLabel) avail++; });
+  }
+  document.getElementById('homeAvail').textContent = avail;
+  document.getElementById('homeAvailCount').textContent = avail + '人';
+
+  const totalPower = state.members.reduce((s,m) => s + (parseInt(m.power)||0), 0);
+  document.getElementById('homePower').textContent = totalPower > 0 ? (totalPower/10000).toFixed(1)+'万' : '0';
+  const vessels = state.members.filter(m=>m.vessel).map(m=>parseInt(m.vessel));
+  const avg = vessels.length ? Math.round(vessels.reduce((a,b)=>a+b)/vessels.length) : '-';
+  document.getElementById('homeVessel').textContent = avg === '-' ? '-' : 'Lv'+avg;
+
+  renderTimeBarChart('homeTimeChart');
+
+  const unanswered = state.members.filter(m => !roll[m.id]);
+  const el = document.getElementById('homeUnanswered');
+  if (state.questions.length === 0) { el.textContent = '質問が設定されていません'; return; }
+  el.innerHTML = unanswered.length > 0
+    ? unanswered.map(m=>`<span style="display:inline-block;margin:2px;font-size:12px;color:var(--danger)">⚠ ${m.name}</span>`).join('')
+    : state.members.length > 0 ? '✅ 全員回答済み！' : '点呼が開始されていません';
+}
+
+// ===== MEMBERS =====
+function renderMembers(search='') {
+  const list = document.getElementById('memberList');
+  let members = search ? state.members.filter(m=>m.name.includes(search)) : state.members;
+  if (members.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">⚔️</div><div class="empty-text">${search?'該当なし':'メンバーを追加してください'}</div></div>`;
+    return;
+  }
+  list.innerHTML = members.map(m => `
+    <div class="member-card">
+      <div class="member-avatar">${m.emoji||'⚔️'}</div>
+      <div class="member-info">
+        <div class="member-name">${m.name}</div>
+        <div class="member-meta"><span class="tag tag-power">⚔️${m.power?Number(m.power).toLocaleString():'未設定'}</span><span class="tag tag-vessel" style="margin-left:4px">🏺Lv${m.vessel||'?'}</span></div>
+        <div class="member-meta" style="margin-top:4px">⏰ ${(m.timeSlots||[]).join('・')||'未設定'}</div>
+      </div>
+      <div class="member-actions">
+        <button class="btn btn-outline btn-sm" onclick="editMember('${m.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMember('${m.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function openAddMember() {
+  document.getElementById('editMemberId').value = '';
+  document.getElementById('memberName').value = '';
+  document.getElementById('memberEmoji').value = '⚔️';
+  document.getElementById('memberPower').value = '';
+  document.getElementById('memberVessel').value = '';
+  renderTimeGrid([]);
+  document.getElementById('modalMember').classList.add('show');
+}
+function editMember(id) {
+  const m = state.members.find(x=>x.id===id); if (!m) return;
+  document.getElementById('editMemberId').value = id;
+  document.getElementById('memberName').value = m.name;
+  document.getElementById('memberEmoji').value = m.emoji||'⚔️';
+  document.getElementById('memberPower').value = m.power||'';
+  document.getElementById('memberVessel').value = m.vessel||'';
+  renderTimeGrid(m.timeSlots||[]);
+  document.getElementById('modalMember').classList.add('show');
+}
+function renderTimeGrid(selected) {
+  document.getElementById('memberTimeGrid').innerHTML = state.timeSlots.map(s=>
+    `<div class="time-slot ${selected.includes(s)?'selected':''}" onclick="this.classList.toggle('selected')">${s}</div>`
+  ).join('');
+}
+function selectEmoji(el) {
+  document.querySelectorAll('#emojiPicker span').forEach(s=>s.style.filter='');
+  el.style.filter = 'drop-shadow(0 0 6px var(--accent))';
+  document.getElementById('memberEmoji').value = el.textContent;
+}
+function saveMember() {
+  const name = document.getElementById('memberName').value.trim();
+  if (!name) { showToast('名前を入力してください','error'); return; }
+  const id = document.getElementById('editMemberId').value || Date.now().toString();
+  const slots = [...document.querySelectorAll('#memberTimeGrid .time-slot.selected')].map(el=>el.textContent);
+  const member = {id,name,emoji:document.getElementById('memberEmoji').value,power:document.getElementById('memberPower').value,vessel:document.getElementById('memberVessel').value,timeSlots:slots};
+  const idx = state.members.findIndex(m=>m.id===id);
+  if (idx>=0) state.members[idx]=member; else state.members.push(member);
+  const obj = {};
+  state.members.forEach(m=>{ obj[m.id]=m; });
+  fbSet('members', obj);
+  closeModal('modalMember');
+  showToast(idx>=0?'更新しました ☁️':'メンバーを追加しました ☁️');
+}
+function deleteMember(id) {
+  state.members = state.members.filter(m=>m.id!==id);
+  const obj = {};
+  state.members.forEach(m=>{ obj[m.id]=m; });
+  fbSet('members', state.members.length ? obj : null);
+  showToast('メンバーを削除しました ☁️');
+}
+
+// ===== ROLL CALL =====
+function renderRollCall() {
+  const today = todayKey();
+  if (!state.rollcall[today]) state.rollcall[today] = {};
+  const roll = state.rollcall[today];
+  document.getElementById('rollQuestions').innerHTML = state.questions.length > 0
+    ? `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">全${state.members.length}名 × ${state.questions.length}項目</div>`
+    : `<div style="font-size:12px;color:var(--muted);margin-bottom:12px">※設定タブで質問を追加してください</div>`;
+
+  const rollList = document.getElementById('rollList');
+  if (!state.members.length) { rollList.innerHTML=`<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">メンバーを追加してください</div></div>`; return; }
+  if (!state.questions.length) { rollList.innerHTML=`<div class="empty"><div class="empty-icon">❓</div><div class="empty-text">設定タブで質問を追加してください</div></div>`; return; }
+
+  rollList.innerHTML = state.members.map(m => {
+    const answers = roll[m.id] || {};
+    return `<div class="roll-card">
+      <div class="roll-member">${m.emoji||'⚔️'} ${m.name}</div>
+      ${state.questions.map(q=>`
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:5px">${q.text}</div>
+          ${buildAnswerButtons(m.id, q, answers[q.id])}
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function buildAnswerButtons(memberId, q, current) {
+  if (q.type === 'custom' && q.choices && q.choices.length) {
+    const cols = q.choices.length <= 2 ? 2 : 2;
+    return `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:6px">
+      ${q.choices.map((c,i) => {
+        const cls = 'sel' + (i % 8);
+        const val = c.label;
+        return `<button class="answer-btn ${current===val?cls:''}"
+          onclick="pickAnswer('${memberId}','${q.id}','${val.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}',this,'${cls}')">${c.emoji?c.emoji+' ':''}${c.label}</button>`;
+      }).join('')}
+    </div>`;
+  }
+  return `<input class="form-input" style="font-size:12px" placeholder="自由記入..."
+    value="${(current||'').replace(/"/g,'&quot;')}"
+    onchange="pickText('${memberId}','${q.id}',this.value)">`;
+}
+
+function pickAnswer(memberId, qId, val, el, cls) {
+  const today = todayKey();
+  if (!state.rollcall[today]) state.rollcall[today] = {};
+  if (!state.rollcall[today][memberId]) state.rollcall[today][memberId] = {};
+  state.rollcall[today][memberId][qId] = val;
+  const qDiv = el.closest('div');
+  qDiv.querySelectorAll('.answer-btn').forEach(b => b.className='answer-btn');
+  el.className = 'answer-btn ' + cls;
+}
+function pickText(memberId, qId, val) {
+  const today = todayKey();
+  if (!state.rollcall[today]) state.rollcall[today] = {};
+  if (!state.rollcall[today][memberId]) state.rollcall[today][memberId] = {};
+  state.rollcall[today][memberId][qId] = val;
+}
+function saveRollCall() {
+  fbSet('rollcall', state.rollcall);
+  showToast('点呼を保存・全員に共有しました ☁️');
+}
+
+// ===== STATS =====
+function renderStats() {
+  renderTimeBarChart('statsTimeChart');
+  renderPowerChart();
+  renderVesselChart();
+  renderRollStats();
+}
+function renderTimeBarChart(cid) {
+  const el = document.getElementById(cid); if (!el) return;
+  if (!state.members.length) { el.innerHTML='<div style="color:var(--muted);font-size:12px">データなし</div>'; return; }
+  const counts = {};
+  state.timeSlots.forEach(s=>counts[s]=0);
+  state.members.forEach(m=>(m.timeSlots||[]).forEach(s=>{ if(s in counts) counts[s]++; }));
+  const max = Math.max(...Object.values(counts),1);
+  const colors = ['#00c6ff','#0090ff','#f59e0b','#10b981','#8b5cf6','#ef4444'];
+  el.innerHTML = Object.entries(counts).filter(([,v])=>v>0).map(([s,c],i)=>
+    `<div class="bar-row"><div class="bar-label">${s}</div><div class="bar-track"><div class="bar-fill" style="width:${c/max*100}%;background:${colors[i%6]}"><span class="bar-count">${c}</span></div></div></div>`
+  ).join('') || '<div style="color:var(--muted);font-size:12px">時間帯未設定</div>';
+}
+function renderPowerChart() {
+  const el = document.getElementById('statsPowerChart'); if (!el) return;
+  const ranges=[['〜5万',0,50000],['5〜10万',50000,100000],['10〜20万',100000,200000],['20万〜',200000,Infinity]];
+  const counts=ranges.map(([l,lo,hi])=>({l,c:state.members.filter(m=>{const p=parseInt(m.power)||0;return p>=lo&&p<hi;}).length}));
+  const max=Math.max(...counts.map(x=>x.c),1);
+  el.innerHTML=counts.map(x=>`<div class="bar-row"><div class="bar-label">${x.l}</div><div class="bar-track"><div class="bar-fill" style="width:${x.c/max*100}%;background:#ef4444"><span class="bar-count">${x.c}</span></div></div></div>`).join('');
+}
+function renderVesselChart() {
+  const el = document.getElementById('statsVesselChart'); if (!el) return;
+  const ranges=[['〜50',0,50],['51〜70',50,70],['71〜90',70,90],['91〜',90,999]];
+  const counts=ranges.map(([l,lo,hi])=>({l,c:state.members.filter(m=>{const v=parseInt(m.vessel)||0;return v>=lo&&v<hi;}).length}));
+  const max=Math.max(...counts.map(x=>x.c),1);
+  el.innerHTML=counts.map(x=>`<div class="bar-row"><div class="bar-label">${x.l}</div><div class="bar-track"><div class="bar-fill" style="width:${x.c/max*100}%;background:var(--gold)"><span class="bar-count">${x.c}</span></div></div></div>`).join('');
+}
+function renderRollStats() {
+  const el = document.getElementById('statsRollResult'); if (!el) return;
+  const today=todayKey(), roll=state.rollcall[today]||{};
+  if (!state.questions.length||!state.members.length) { el.innerHTML='<div style="color:var(--muted);font-size:12px">データなし</div>'; return; }
+  const bclr=['var(--success)','var(--gold)','#8b5cf6','var(--danger)','var(--accent)','#f97316','#ec4899','#6366f1'];
+  el.innerHTML=state.questions.map(q=>{
+    const ans={};
+    state.members.forEach(m=>{ const a=roll[m.id]?.[q.id]; if(a) ans[a]=(ans[a]||0)+1; });
+    const order=(q.choices||[]).map(c=>c.label);
+    const sorted=[...Object.entries(ans)].sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));
+    const unanswered=state.members.length-Object.values(ans).reduce((a,b)=>a+b,0);
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">${q.text}</div>
+      ${sorted.map(([a,c],i)=>`<div class="bar-row" style="margin-bottom:4px"><div class="bar-label" style="width:70px">${a}</div><div class="bar-track" style="height:18px"><div class="bar-fill" style="width:${c/state.members.length*100}%;background:${bclr[i%8]}"><span class="bar-count">${c}</span></div></div></div>`).join('')}
+      ${unanswered>0?`<div style="font-size:10px;color:var(--muted)">未回答: ${unanswered}名</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ===== SETTINGS =====
+function renderSettings() {
+  document.getElementById('timeSlotList').innerHTML = state.timeSlots.map((s,i)=>
+    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span class="tag" style="background:rgba(0,198,255,.1);border:1px solid rgba(0,198,255,.3);color:var(--accent);flex:1">${s}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeTimeSlot(${i})">削除</button>
+    </div>`).join('');
+
+  document.getElementById('questionList').innerHTML = state.questions.map((q,i)=>{
+    const choicesHtml = q.type==='custom'&&q.choices ? q.choices.map(c=>`<span class="option-tag">${c.emoji||''}${c.label}</span>`).join('') : '';
+    return `<div class="question-editor">
+      <div class="q-title">
+        <span>${i+1}. ${q.text}</span>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn btn-outline btn-sm" onclick="openEditQuestion('${q.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="removeQuestion('${q.id}')">🗑</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:${choicesHtml?'5px':'0'}">タイプ: ${q.type==='custom'?'カスタム':'テキスト'}</div>
+      ${choicesHtml?`<div style="flex-wrap:wrap;display:flex">${choicesHtml}</div>`:''}
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">質問がありません</div>';
+}
+
+function addTimeSlot() {
+  const val = document.getElementById('newTimeSlot').value.trim();
+  if (!val) return;
+  if (state.timeSlots.includes(val)) { showToast('すでに存在します'); return; }
+  state.timeSlots.push(val);
+  document.getElementById('newTimeSlot').value = '';
+  fbSet('settings', {timeSlots:state.timeSlots, questions:state.questions});
+  showToast('追加しました ☁️');
+}
+function removeTimeSlot(i) {
+  state.timeSlots.splice(i,1);
+  fbSet('settings', {timeSlots:state.timeSlots, questions:state.questions});
+}
+function removeQuestion(id) {
+  state.questions = state.questions.filter(q=>q.id!==id);
+  fbSet('settings', {timeSlots:state.timeSlots, questions:state.questions});
+  showToast('質問を削除しました ☁️');
+}
+function openAddQuestion() {
+  document.getElementById('editQuestionId').value='';
+  document.getElementById('questionText').value='';
+  document.getElementById('questionType').value='custom';
+  tempChoices=[];
+  updateOptionPreview();
+  document.getElementById('modalQuestion').classList.add('show');
+}
+function openEditQuestion(id) {
+  const q=state.questions.find(x=>x.id===id); if(!q) return;
+  document.getElementById('editQuestionId').value=id;
+  document.getElementById('questionText').value=q.text;
+  document.getElementById('questionType').value=q.type;
+  tempChoices=q.choices?JSON.parse(JSON.stringify(q.choices)):[];
+  updateOptionPreview();
+  document.getElementById('modalQuestion').classList.add('show');
+}
+function addCustomChoice() {
+  if (tempChoices.length>=8) { showToast('最大8つまでです','error'); return; }
+  const label=document.getElementById('newChoiceLabel').value.trim();
+  if (!label) { showToast('テキストを入力してください','error'); return; }
+  tempChoices.push({emoji:document.getElementById('newChoiceEmoji').value.trim(), label});
+  document.getElementById('newChoiceLabel').value='';
+  document.getElementById('newChoiceEmoji').value='';
+  renderCustomChoiceList();
+}
+function removeCustomChoice(i) { tempChoices.splice(i,1); renderCustomChoiceList(); }
+function moveChoice(i,dir) {
+  const j=i+dir; if(j<0||j>=tempChoices.length) return;
+  [tempChoices[i],tempChoices[j]]=[tempChoices[j],tempChoices[i]];
+  renderCustomChoiceList();
+}
+function renderCustomChoiceList() {
+  const colors=['#10b981','#f59e0b','#8b5cf6','#00c6ff','#f97316','#ec4899','#6366f1','#ef4444'];
+  document.getElementById('customChoiceList').innerHTML = tempChoices.map((c,i)=>
+    `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+      <span style="font-size:18px;width:28px;text-align:center">${c.emoji||'　'}</span>
+      <span style="flex:1;font-size:13px;padding:6px 10px;background:var(--surface2);border-radius:6px;border:1px solid ${colors[i%8]}40;color:${colors[i%8]}">${c.label}</span>
+      <button class="btn btn-outline btn-sm" onclick="moveChoice(${i},-1)" ${i===0?'disabled':''}>↑</button>
+      <button class="btn btn-outline btn-sm" onclick="moveChoice(${i},1)" ${i===tempChoices.length-1?'disabled':''}>↓</button>
+      <button class="btn btn-danger btn-sm" onclick="removeCustomChoice(${i})">✕</button>
+    </div>`
+  ).join('')||'<div style="color:var(--muted);font-size:11px;margin-bottom:4px">選択肢を追加してください</div>';
+}
+function updateOptionPreview() {
+  const type=document.getElementById('questionType').value;
+  document.getElementById('customChoicesArea').style.display=type==='custom'?'':'none';
+  document.getElementById('presetPreviewArea').style.display=type!=='custom'?'':'none';
+  if (type==='custom') renderCustomChoiceList();
+  else document.getElementById('optionPreview').innerHTML='<span class="option-tag">自由テキスト入力</span>';
+}
+function saveQuestion() {
+  const text=document.getElementById('questionText').value.trim();
+  if (!text) { showToast('質問文を入力してください','error'); return; }
+  const type=document.getElementById('questionType').value;
+  if (type==='custom'&&tempChoices.length<2) { showToast('選択肢を2つ以上追加してください','error'); return; }
+  const editId=document.getElementById('editQuestionId').value;
+  const q={id:editId||('q'+Date.now()),text,type,choices:type==='custom'?tempChoices:null};
+  const idx=state.questions.findIndex(x=>x.id===q.id);
+  if (idx>=0) state.questions[idx]=q; else state.questions.push(q);
+  fbSet('settings',{timeSlots:state.timeSlots,questions:state.questions});
+  closeModal('modalQuestion');
+  showToast(editId?'質問を更新しました ☁️':'質問を追加しました ☁️');
+}
+
+let clearTap=0;
+function clearAllData() {
+  clearTap++;
+  if (clearTap===1) { showToast('もう一度タップで初期化します ⚠️','error'); setTimeout(()=>{clearTap=0;},3000); return; }
+  clearTap=0;
+  fbSet('members',null); fbSet('rollcall',null); fbSet('settings',null);
+  showToast('初期化しました');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); });
+});
+
+// 初期表示（Firebase同期前の画面）
+tempChoices=[];
+updateOptionPreview();
+const _n=new Date();
+document.getElementById('todayDate').textContent=`${_n.getFullYear()}年${_n.getMonth()+1}月${_n.getDate()}日（${'日月火水木金土'[_n.getDay()]}）`;
+document.getElementById('rollDate').textContent=document.getElementById('todayDate').textContent;
+</script>
+</body>
+</html>
